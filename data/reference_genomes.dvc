@@ -1,0 +1,6 @@
+outs:
+- md5: a6bca837aa9e984c9344b50244fe1632.dir
+  size: 818499387
+  nfiles: 1
+  hash: md5
+  path: reference_genomes
