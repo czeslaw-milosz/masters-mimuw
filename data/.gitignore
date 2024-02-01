@@ -1,1 +1,7 @@
 /reference_genomes
+/sample.BRCA-EU.tsv
+/simple_somatic_mutation.open.BRCA-EU.sbs_only.tsv
+/simple_somatic_mutation.open.BRCA-EU.tsv
+/specimen.BRCA-EU.tsv
+/structural_somatic_mutation.BRCA-EU.tsv
+/copy_number_somatic_mutation.BRCA-EU.tsv

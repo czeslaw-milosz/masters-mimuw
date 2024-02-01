@@ -1,0 +1,5 @@
+outs:
+- md5: 0ab779232458c0dde9a022e4008aa683
+  size: 5001388404
+  hash: md5
+  path: simple_somatic_mutation.open.BRCA-EU.sbs_only.tsv

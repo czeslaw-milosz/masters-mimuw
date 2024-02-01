@@ -1,0 +1,5 @@
+outs:
+- md5: c7f969ca0ba1932e98ea67c28f3064a3
+  size: 45360573
+  hash: md5
+  path: structural_somatic_mutation.BRCA-EU.tsv
