@@ -1,5 +1,0 @@
-outs:
-- md5: c4f52870aaca613d382b4a6b928c0db4
-  size: 2390159731
-  hash: md5
-  path: copy_number_somatic_mutation.BRCA-EU.tsv

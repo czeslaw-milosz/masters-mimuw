@@ -7,7 +7,7 @@ import polars as pl
 import scipy
 from SigProfilerMatrixGenerator.scripts import SigProfilerMatrixGeneratorFunc as matGen
 
-from src.config import config
+from config import config
 
 
 def get_nearest_signatures(

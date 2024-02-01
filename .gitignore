@@ -1,6 +1,11 @@
 # envs
 env/
 
+# datasets
+data/brca/
+data/cosmic/
+data/plots_new/
+
 # vscode settings
 .vscode/
 
