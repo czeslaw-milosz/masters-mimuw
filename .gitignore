@@ -5,6 +5,11 @@ env/
 data/brca/
 data/cosmic/
 data/plots_new/
+data/mSigHdp_sup_files/
+data/exome/
+data/lqad*
+data/pcawg
+data/plots/
 
 # vscode settings
 .vscode/

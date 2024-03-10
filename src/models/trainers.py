@@ -12,7 +12,7 @@ from config import config
 from models import models
 
 
-def train_prodLDA(mutations_df: pd.DataFrame|pl.DataFrame) -> models.ProdLDA, list[float]:
+def train_prodLDA(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[models.ProdLDA, list[float]]:
     """Train a ProdLDA model on the given data.
 
     Args:
@@ -39,10 +39,12 @@ def train_prodLDA(mutations_df: pd.DataFrame|pl.DataFrame) -> models.ProdLDA, li
         num_topics=config.N_SIGNATURES_TARGET,
         hidden=config.HIDDEN_SIZE,
         dropout=config.DROPOUT,
+        loss_regularizer=config.LOSS_REGULARIZER
+        # device=device
     )
     prodLDA.to(device)
 
-    optimizer = pyro.optim.Adam({"lr": config.LEARNING_RATE})
+    optimizer = pyro.optim.Adam({"lr": config.LEARNING_RATE, "betas": config.BETAS})
     svi = SVI(prodLDA.model, prodLDA.guide, optimizer, loss=TraceMeanField_ELBO())
     num_batches = int(np.ceil(mutation_counts.shape[0] / config.BATCH_SIZE))
 
