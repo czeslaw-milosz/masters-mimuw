@@ -1,16 +1,41 @@
+import numpy as np
 import pyro
 import pyro.distributions as dist
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.preprocessing import normalize
 
 from models import losses
 from models.encoders import ProdLDAEncoder, ProdLDADirichletEncoder
 from models.decoders import ProdLDADecoder
 from config import config
 
+
+class ClassicLDA:
+    def __init__(self, max_iter=100, num_topics=10, evaluate_every=10, random_seed=2137) -> None:
+        self.max_iter = max_iter
+        self.num_topics = num_topics
+        self.evaluate_every = evaluate_every
+        self.random_seed = random_seed
+        self.model = LatentDirichletAllocation(
+            n_components=self.num_topics,
+            max_iter=self.max_iter,
+            learning_method="batch",
+            learning_offset=10.0,
+            perp_tol=1e-3,
+            random_state=self.random_seed,
+            n_jobs=-1,
+            evaluate_every=self.evaluate_every
+        )
+
+    def beta(self, normalized=False) -> np.ndarray:
+        return self.model.components_ if not normalized else self.model.components_ / self.model.components_.sum(axis=1, keepdims=True)
+
+
 class ProdLDA(nn.Module):
-    def __init__(self, vocab_size, num_topics, hidden, dropout, loss_regularizer=None, reg_lambda=1e+03):
+    def __init__(self, vocab_size, num_topics, hidden, dropout, loss_regularizer=None, reg_lambda=1e+03) -> None:
         super().__init__()
         self.vocab_size = vocab_size
         self.num_topics = num_topics
@@ -61,7 +86,7 @@ class ProdLDA(nn.Module):
     
 
 class ProdLDADirichlet(nn.Module):
-    def __init__(self, vocab_size, num_topics, hidden, dropout, device):
+    def __init__(self, vocab_size, num_topics, hidden, dropout, device) -> None:
         super().__init__()
         self.vocab_size = vocab_size
         self.num_topics = num_topics
