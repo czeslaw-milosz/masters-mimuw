@@ -10,12 +10,13 @@ from models.decoders import ProdLDADecoder
 from config import config
 
 class ProdLDA(nn.Module):
-    def __init__(self, vocab_size, num_topics, hidden, dropout, loss_regularizer=None):
+    def __init__(self, vocab_size, num_topics, hidden, dropout, loss_regularizer=None, reg_lambda=1e+03):
         super().__init__()
         self.vocab_size = vocab_size
         self.num_topics = num_topics
-        assert loss_regularizer in (None, "l2", "cosine")
+        assert loss_regularizer in (None, "l1", "l2", "cosine")
         self.loss_regularizer = loss_regularizer
+        self.reg_lambda = reg_lambda
         self.encoder = ProdLDAEncoder(vocab_size, num_topics, hidden, dropout)
         self.decoder = ProdLDADecoder(vocab_size, num_topics, dropout)
 
@@ -42,9 +43,11 @@ class ProdLDA(nn.Module):
         pyro.module("encoder", self.encoder)
 
         if self.loss_regularizer == "l2":
-            pyro.factor("beta_penalty", losses.l2_penalty(self.decoder.beta.weight), has_rsample=True)
+            pyro.factor("beta_penalty", self.reg_lambda * losses.l2_penalty(self.decoder.beta.weight), has_rsample=True)
+        elif self.loss_regularizer == "l1":
+            pyro.factor("beta_penalty", self.reg_lambda * losses.l1_penalty(self.decoder.beta.weight), has_rsample=True)
         elif self.loss_regularizer == "cosine":
-            pyro.factor("beta_penalty", losses.cosine_penalty(self.decoder.beta.weight), has_rsample=True)
+            pyro.factor("beta_penalty", self.reg_lambda * losses.cosine_penalty(self.decoder.beta.weight), has_rsample=True)
 
         with pyro.plate("documents", docs.shape[0]):
             # Dirichlet prior 𝑝(𝜃|𝛼) is replaced by a logistic-normal distribution, where μ and Σ are the encoder outputs

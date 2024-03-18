@@ -39,8 +39,8 @@ def train_prodLDA(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[models.ProdL
         num_topics=config.N_SIGNATURES_TARGET,
         hidden=config.HIDDEN_SIZE,
         dropout=config.DROPOUT,
-        loss_regularizer=config.LOSS_REGULARIZER
-        # device=device
+        loss_regularizer=config.LOSS_REGULARIZER,
+        reg_lambda=config.REGULARIZER_LAMBDA
     )
     prodLDA.to(device)
 

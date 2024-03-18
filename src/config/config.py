@@ -1,6 +1,3 @@
-import os
-import numpy as np
-
 DATA_DIR = "data"
 MUTATIONS_FILE_NAME = "simple_somatic_mutation.open.BRCA-EU.tsv"
 COSMIC_FILE_PATH = "data/cosmic/COSMIC_v3.4_SBS_GRCh37.txt"
@@ -20,9 +17,10 @@ DROPOUT = 0.3
 HIDDEN_SIZE = 128
 NUM_EPOCHS = 200
 LOSS_REGULARIZER = "cosine"
+REGULARIZER_LAMBDA = 1e+04
 
-EXPERIMENT_NAME = "prodLDApluscosine"
-PRODLDA_MODEL_PATH = f"data/models/{EXPERIMENT_NAME}model.pt"
+EXPERIMENT_NAME = "prodLDAcosinereg"
+PRODLDA_MODEL_PATH = f"data/models/{EXPERIMENT_NAME}_model.pt"
 LOSS_PLOT_PATH = f"data/plots/{EXPERIMENT_NAME}_loss.png"
 SIGNATURES_PLOT_PATH = f"data/plots/{EXPERIMENT_NAME}_signatures.png"
 SAVE_MODEL = False
