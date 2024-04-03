@@ -119,3 +119,80 @@ class ProdLDADirichlet(nn.Module):
     def beta(self):
         # beta matrix elements are the weights of the FC layer on the decoder
         return self.decoder.beta.weight.cpu().detach().T
+
+
+class RRTVAE(nn.Module):
+
+    def __init__(self, input_size, num_topics, hidden_size=500, 
+                 lambda_=0.01, delta=1e-10, prior_alpha=1.0, device="cuda:0") -> None:
+        super().__init__()
+        
+        self.input_size = input_size
+        self.num_topics = num_topics
+        self.hidden_size = hidden_size
+        self.lambda_ = lambda_
+        self.delta = delta
+        self.prior_alpha = torch.Tensor(1, num_topics).fill_(prior_alpha)
+        self.device = device
+        
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(self.input_size, self.hidden_size),   
+            nn.ReLU(True),
+            
+            nn.Linear(self.hidden_size, self.hidden_size),   
+            nn.BatchNorm1d(self.hidden_size),
+            nn.ReLU(True),
+            
+            nn.Linear(self.hidden_size, self.num_topics),
+            nn.BatchNorm1d(self.num_topics),
+        )
+        
+        # Decoder
+        self.decoder = nn.Linear(self.num_topics, self.input_size)             
+        self.decoder_bn = nn.BatchNorm1d(self.input_size)
+        self.decoder.weight.data.uniform_(0, 1)
+
+    def beta(self):
+        return self.decoder.weight.cpu().detach().T 
+
+    def RealSampler(self, parameter, multi=False):
+        m = torch.distributions.dirichlet.Dirichlet(parameter)
+        data = m.sample((2000,)) if multi else m.sample()
+        return data.to(self.device)
+            
+    # Sampling from Dirichlet distributions using RRT
+    def RRT(self, parameter):
+        # Round the Dirichlet parameter to its delta decimal place
+        param_round = torch.floor(self.delta * parameter) / self.delta
+        # Sampling from a "Rounded" Dirichlet distribution
+        sample = self.RealSampler(param_round, multi=False)
+        # Construct the target sample
+        sample = sample + (parameter - param_round) * self.lambda_
+        sample = sample / torch.sum(sample, dim=1, keepdim=True)
+        return sample
+        
+    
+    def forward(self, inputs, avg_loss=True):
+        # Encoder
+        alpha = self.encoder(inputs)
+        alpha = torch.exp(alpha/4)
+        alpha = F.hardtanh(alpha, min_val=0., max_val=30)
+        # Sampling using RRT
+        p = self.RRT(alpha)
+        # Decoder
+        recon = F.softmax(self.decoder_bn(self.decoder(p)), dim=1)  # Reconstruct a distribution over vocabularies
+        return recon, self.loss(inputs=inputs, recon=recon, alpha=alpha, avg=avg_loss)
+      
+
+    def loss(self, inputs, recon, alpha, avg=True):
+        # Negative log-likelihood
+        NLL  = -(inputs * (recon + 1e-10).log()).sum(1)
+        # Dirichlet prior
+        prior_alpha = self.prior_alpha.expand_as(alpha)
+        # KL divergence between two Dirichlet distributions
+        KL = torch.mvlgamma(alpha.sum(1), p=1) - torch.mvlgamma(alpha, p=1).sum(1) - torch.mvlgamma(prior_alpha.sum(1), p=1) + torch.mvlgamma(prior_alpha, p=1).sum(1) + ((alpha - prior_alpha) * (torch.digamma(alpha) - torch.digamma(alpha.sum(dim=1, keepdim=True).expand_as(alpha)))).sum(1) 
+        # loss
+        loss = (NLL + KL)
+        # In the training mode, return averaged loss. In the testing mode, return individual loss
+        return (loss.mean(), KL.mean()) if avg else (loss, KL)
