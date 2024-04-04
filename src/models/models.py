@@ -123,11 +123,11 @@ class ProdLDADirichlet(nn.Module):
 
 class RRTVAE(nn.Module):
 
-    def __init__(self, input_size, num_topics, hidden_size=500, 
-                 lambda_=0.01, delta=1e-10, prior_alpha=1.0, device="cuda:0") -> None:
+    def __init__(self, vocab_size, num_topics, hidden_size=500, 
+                 lambda_=0.01, delta=1e10, prior_alpha=1.0, device="cuda:0") -> None:
         super().__init__()
         
-        self.input_size = input_size
+        self.vocab_size = vocab_size
         self.num_topics = num_topics
         self.hidden_size = hidden_size
         self.lambda_ = lambda_
@@ -137,7 +137,7 @@ class RRTVAE(nn.Module):
         
         # Encoder
         self.encoder = nn.Sequential(
-            nn.Linear(self.input_size, self.hidden_size),   
+            nn.Linear(self.vocab_size, self.hidden_size),   
             nn.ReLU(True),
             
             nn.Linear(self.hidden_size, self.hidden_size),   
@@ -149,8 +149,8 @@ class RRTVAE(nn.Module):
         )
         
         # Decoder
-        self.decoder = nn.Linear(self.num_topics, self.input_size)             
-        self.decoder_bn = nn.BatchNorm1d(self.input_size)
+        self.decoder = nn.Linear(self.num_topics, self.vocab_size)             
+        self.decoder_bn = nn.BatchNorm1d(self.vocab_size)
         self.decoder.weight.data.uniform_(0, 1)
 
     def beta(self):
