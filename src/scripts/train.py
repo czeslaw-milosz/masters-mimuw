@@ -6,7 +6,7 @@ import torch
 from sigProfilerPlotting import plotSBS
 from matplotlib import image as mpimg
 
-from models.trainers import train_prodLDA
+from models.trainers import train_prodLDA, train_RRTVAE
 from config import config
 from utils.data_utils import get_nearest_signatures
 
@@ -29,7 +29,8 @@ if __name__ == "__main__":
     ).set_index("MutationType")
 
     assert np.all(mutations_df.index == cosmic.index)
-    model, loss = train_prodLDA(mutations_df)
+    # model, loss = train_prodLDA(mutations_df)
+    model, loss = train_RRTVAE(mutations_df)
 
     P = model.beta()
     P_prob = (P / P.sum(dim=1).unsqueeze(-1)).numpy()
@@ -40,7 +41,7 @@ if __name__ == "__main__":
     plt.plot(loss)
     plt.xlabel("epoch")
     plt.ylabel("loss")
-    plt.title("ProdLDA loss history")
+    plt.title("loss history")
     plt.savefig(config.LOSS_PLOT_PATH)
     if config.SAVE_MODEL:
         torch.save(model.state_dict(), config.PRODLDA_MODEL_PATH)

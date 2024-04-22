@@ -189,7 +189,7 @@ class RRTVAE(nn.Module):
         # Negative log-likelihood
         NLL  = -(inputs * (recon + 1e-10).log()).sum(1)
         # Dirichlet prior
-        prior_alpha = self.prior_alpha.expand_as(alpha)
+        prior_alpha = self.prior_alpha.expand_as(alpha).to("cuda:0")
         # KL divergence between two Dirichlet distributions
         KL = torch.mvlgamma(alpha.sum(1), p=1) - torch.mvlgamma(alpha, p=1).sum(1) - torch.mvlgamma(prior_alpha.sum(1), p=1) + torch.mvlgamma(prior_alpha, p=1).sum(1) + ((alpha - prior_alpha) * (torch.digamma(alpha) - torch.digamma(alpha.sum(dim=1, keepdim=True).expand_as(alpha)))).sum(1) 
         # loss

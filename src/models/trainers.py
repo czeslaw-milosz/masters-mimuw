@@ -10,11 +10,11 @@ import tqdm
 from pyro.infer import SVI, TraceMeanField_ELBO
 
 from config import config
-from models import models
+from models import full_models
 from utils import training_utils
 
 
-def train_prodLDA(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[models.ProdLDA, list[float]]:
+def train_prodLDA(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[full_models.ProdLDA, list[float]]:
     """Train a ProdLDA model on the given data.
 
     Args:
@@ -36,7 +36,7 @@ def train_prodLDA(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[models.ProdL
 
     pyro.clear_param_store()
 
-    prodLDA = models.ProdLDA(
+    prodLDA = full_models.ProdLDA(
         vocab_size=mutation_counts.shape[1],
         num_topics=config.N_SIGNATURES_TARGET,
         hidden=config.HIDDEN_SIZE,
@@ -64,7 +64,7 @@ def train_prodLDA(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[models.ProdL
     return prodLDA, epoch_loss
 
 
-def trainRRTVAE(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[models.ProdLDA, list[float]]:
+def train_RRTVAE(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[full_models.ProdLDA, list[float]]:
     """Train a RRTVAR model on the given data.
 
     Args:
@@ -83,16 +83,15 @@ def trainRRTVAE(mutations_df: pd.DataFrame|pl.DataFrame) -> tuple[models.ProdLDA
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     mutation_counts = mutation_counts.float().to(device)
 
-    model = models.RRTVAE(
+    model = full_models.RRTVAE(
         vocab_size=mutation_counts.shape[1], 
         num_topics=config.N_SIGNATURES_TARGET, 
-        hidden=config.HIDDEN_SIZE,
+        hidden_size=config.HIDDEN_SIZE,
         lambda_=config.LAMBDA, 
         delta=config.DELTA, 
         prior_alpha=config.PRIOR_ALPHA, 
         device=device
-    )
-    model.to(device)
+    ).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE, betas=config.BETAS)
 
