@@ -8,8 +8,9 @@ from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.preprocessing import normalize
 
 from models import losses
-from models.encoders import ProdLDAEncoder, ProdLDADirichletEncoder
-from models.decoders import ProdLDADecoder
+from models.encoders import DVAEEncoder, ProdLDAEncoder, ProdLDADirichletEncoder
+from models.decoders import DVAEDecoder, ProdLDADecoder
+from models.model_utils import CollapsedMultinomial
 from config import config
 
 
@@ -196,3 +197,83 @@ class RRTVAE(nn.Module):
         loss = (NLL + KL)
         # In the training mode, return averaged loss. In the testing mode, return individual loss
         return (loss.mean(), KL.mean()) if avg else (loss, KL)
+
+
+class DVAE(nn.Module):
+    def __init__(
+        self,
+        vocab_size: int,
+        num_topics: int,
+        alpha_prior: float,
+        embeddings_dim: int,
+        hidden_dim: int,
+        dropout: float,
+        bias_term: bool = True,
+        softmax_beta: bool = False,
+        beta_init: torch.tensor = None,
+        cuda: bool = True,
+    ):
+        super().__init__()
+        # create the encoder and decoder networks
+        self.encoder = DVAEEncoder(
+            vocab_size=vocab_size,
+            num_topics=num_topics,
+            embeddings_dim=embeddings_dim,
+            hidden_dim=hidden_dim,
+            dropout=dropout,
+        )
+        self.decoder = DVAEDecoder(
+            vocab_size=vocab_size,
+            num_topics=num_topics,
+            bias_term=bias_term,
+            softmax_beta=softmax_beta,
+            beta_init=beta_init,
+        )
+
+        if cuda:
+            # calling cuda() here will put all the parameters of
+            # the encoder and decoder networks into gpu memory
+            self.cuda()
+        self.use_cuda = cuda
+        self.num_topics = num_topics
+        self.alpha_prior = alpha_prior
+
+    # define the model p(x|z)p(z)
+    def model(
+        self, x: torch.tensor,
+        bn_annealing_factor: float = 1.0,
+        kl_annealing_factor: float = 1.0
+    ) -> torch.tensor:
+        # register PyTorch module `decoder` with Pyro
+        pyro.module("decoder", self.decoder)
+
+        with pyro.plate("data", x.shape[0]):
+            # setup hyperparameters for prior p(z)
+            alpha_0 = torch.ones(
+                x.shape[0], self.num_topics, device=x.device
+            ) * self.alpha_prior
+            
+            # sample from prior (value will be sampled by guide when computing the ELBO)
+            z = pyro.sample("doc_topics", dist.Dirichlet(alpha_0))
+            # decode the latent code z
+            x_recon = self.decoder(z, bn_annealing_factor)
+            # score against actual data
+            pyro.sample("obs", CollapsedMultinomial(1, probs=x_recon), obs=x)
+
+            return x_recon
+
+    # define the guide (i.e. variational distribution) q(z|x)
+    def guide(
+        self, 
+        x: torch.tensor,
+        bn_annealing_factor: float = 1.0,
+        kl_annealing_factor: float = 1.0
+    ):
+        # register PyTorch module `encoder` with Pyro
+        pyro.module("encoder", self.encoder)
+        with pyro.plate("data", x.shape[0]):
+            # use the encoder to get the parameters used to define q(z|x)
+            z = self.encoder(x)
+            # sample the latent code z
+            with pyro.poutine.scale(None, kl_annealing_factor):
+                pyro.sample("doc_topics", dist.Dirichlet(z))
